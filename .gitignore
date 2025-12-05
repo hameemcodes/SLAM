@@ -1024,4 +1024,4 @@ docs/md_to_pdf/
 docs/future_weeks
 
 .DS_Store
-.pth
+*.pth
