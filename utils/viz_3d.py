@@ -1,257 +1,215 @@
-"""
-3D Visualization utilities for displaying 3D lines using matplotlib.
-
-This module provides functions to create and update a live 3D visualization
-of detected lines in camera coordinate space.
-"""
+# 3D visualization for SLAM line features
+# Uses matplotlib to show 3D lines in real-time
+# TODO: this is kinda slow, maybe look into using Open3D instead?
 
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import matplotlib
-matplotlib.use('TkAgg')  # Non-blocking backend for real-time updates
+matplotlib.use('TkAgg')  # non-blocking backend (took forever to figure this out)
 
 
 def initialize_3d_visualization():
-    """
-    Initialize matplotlib 3D visualization window.
+    # sets up the matplotlib 3D plot window
+    # returns figure and axis objects
 
-    Creates a non-blocking 3D plot that can be updated in real-time
-    while other processing continues.
-
-    Returns:
-        fig: Matplotlib figure object
-        ax: 3D axes object
-
-    Usage:
-        fig, ax = initialize_3d_visualization()
-        # ... process data ...
-        update_3d_visualization(ax, lines_3d)
-    """
-    plt.ion()  # Enable interactive mode (non-blocking)
+    plt.ion()  # interactive mode - makes it non-blocking
 
     fig = plt.figure(figsize=(10, 8))
     ax = fig.add_subplot(111, projection='3d')
 
-    # Set labels and title
-    ax.set_xlabel('X (camera right)', fontsize=10)
-    ax.set_ylabel('Y (camera down)', fontsize=10)
-    ax.set_zlabel('Z (camera forward)', fontsize=10)
-    ax.set_title('3D Line Visualization (Camera Frame)', fontsize=12)
+    # label the axes
+    ax.set_xlabel('X (right)', fontsize=10)
+    ax.set_ylabel('Y (down)', fontsize=10)
+    ax.set_zlabel('Z (forward)', fontsize=10)
+    ax.set_title('3D Lines Visualization', fontsize=12)
 
-    # Set initial view angle for better perspective
+    # set viewing angle (20, 45 looks good)
     ax.view_init(elev=20, azim=45)
 
-    # Show without blocking
+    # show the window without blocking
     plt.show(block=False)
-    plt.pause(0.001)
+    plt.pause(0.001)  # small pause needed for window to appear
 
     return fig, ax
 
 
 def update_3d_visualization(ax, lines_3d, matched_indices=None):
-    """
-    Update 3D visualization with new lines.
+    # updates the 3D plot with new lines
+    # matched lines are green, unmatched are red
 
-    Clears the previous frame and draws the current set of 3D lines.
-    Lines are color-coded based on whether they were matched with
-    the previous frame.
-
-    Args:
-        ax: Matplotlib 3D axes object (from initialize_3d_visualization)
-        lines_3d: Array of 3D lines (N, 6) with format [X1, Y1, Z1, X2, Y2, Z2]
-        matched_indices: Optional list of indices for lines that were matched
-                        Matched lines are drawn in green, unmatched in red
-
-    Returns:
-        None
-
-    Note:
-        Uses plt.pause() to update display without blocking execution.
-        The visualization window remains interactive and can be rotated
-        with the mouse.
-    """
-    # Clear previous lines
+    # clear previous stuff
     ax.cla()
 
-    # Reset labels (cleared by cla())
-    ax.set_xlabel('X (camera right)', fontsize=10)
-    ax.set_ylabel('Y (camera down)', fontsize=10)
-    ax.set_zlabel('Z (camera forward)', fontsize=10)
-    ax.set_title('3D Line Visualization (Camera Frame)', fontsize=12)
+    # reset labels (cla clears them)
+    ax.set_xlabel('X (right)', fontsize=10)
+    ax.set_ylabel('Y (down)', fontsize=10)
+    ax.set_zlabel('Z (forward)', fontsize=10)
+    ax.set_title('3D Lines', fontsize=12)
 
-    # Handle empty case
+    # if no lines, show message
     if len(lines_3d) == 0:
-        ax.text(0, 0, 0, 'No valid 3D lines', fontsize=12, ha='center')
+        ax.text(0, 0, 0, 'No lines to show', fontsize=12, ha='center')
         plt.draw()
         plt.pause(0.001)
         return
 
-    # Convert matched indices to set for fast lookup
+    # convert to set for faster lookups
     matched_set = set(matched_indices) if matched_indices is not None else set()
 
-    # Draw each line
+    # draw each 3D line
     for idx, line in enumerate(lines_3d):
         X1, Y1, Z1, X2, Y2, Z2 = line
 
-        # Color coding:
-        # - Green: matched lines (found in both current and previous frame)
-        # - Red: unmatched lines (new or not matched)
-        color = 'green' if idx in matched_set else 'red'
-        alpha = 0.8 if idx in matched_set else 0.4  # Matched lines more opaque
-        linewidth = 2.0 if idx in matched_set else 1.5
+        # color based on whether line was matched
+        # green = matched, red = not matched
+        if idx in matched_set:
+            clr = 'green'
+            alph = 0.8
+            lw = 2.0
+        else:
+            clr = 'red'
+            alph = 0.4
+            lw = 1.5
 
-        # Plot line segment
+        # plot the line segment
         ax.plot([X1, X2], [Y1, Y2], [Z1, Z2],
-                color=color, linewidth=linewidth, alpha=alpha)
+                color=clr, linewidth=lw, alpha=alph)
 
-    # Set axis limits based on data statistics
-    # This provides better visualization by filtering out extreme outliers
+    # set axis limits based on the data
+    # use median and std to avoid outliers messing up the view
     if len(lines_3d) > 0:
-        # Reshape to (N*2, 3) to get all points
-        all_points = lines_3d.reshape(-1, 3)
+        # get all endpoint coordinates
+        pts = lines_3d.reshape(-1, 3)
 
-        # Compute statistics for each axis
-        x_median, y_median, z_median = np.median(all_points, axis=0)
-        x_std, y_std, z_std = np.std(all_points, axis=0)
+        # compute stats
+        x_med, y_med, z_med = np.median(pts, axis=0)
+        x_std, y_std, z_std = np.std(pts, axis=0)
 
-        # Set limits to 3 standard deviations around median
-        # This excludes extreme outliers while preserving most data
-        scale = 3  # Number of standard deviations
-        x_min, x_max = x_median - scale * x_std, x_median + scale * x_std
-        y_min, y_max = y_median - scale * y_std, y_median + scale * y_std
-        z_min, z_max = z_median - scale * z_std, z_median + scale * z_std
+        # set limits to +/- 3 std devs
+        scale_factor = 3  # this value worked well
+        xMin, xMax = x_med - scale_factor * x_std, x_med + scale_factor * x_std
+        yMin, yMax = y_med - scale_factor * y_std, y_med + scale_factor * y_std
+        zMin, zMax = z_med - scale_factor * z_std, z_med + scale_factor * z_std
 
-        # Ensure minimum range for visibility
-        min_range = 1.0
-        if x_max - x_min < min_range:
-            x_mid = (x_min + x_max) / 2
-            x_min, x_max = x_mid - min_range / 2, x_mid + min_range / 2
-        if y_max - y_min < min_range:
-            y_mid = (y_min + y_max) / 2
-            y_min, y_max = y_mid - min_range / 2, y_mid + min_range / 2
-        if z_max - z_min < min_range:
-            z_mid = (z_min + z_max) / 2
-            z_min, z_max = z_mid - min_range / 2, z_mid + min_range / 2
+        # make sure range isn't too small
+        minRange = 1.0
+        if xMax - xMin < minRange:
+            xMid = (xMin + xMax) / 2
+            xMin, xMax = xMid - minRange / 2, xMid + minRange / 2
+        if yMax - yMin < minRange:
+            yMid = (yMin + yMax) / 2
+            yMin, yMax = yMid - minRange / 2, yMid + minRange / 2
+        if zMax - zMin < minRange:
+            zMid = (zMin + zMax) / 2
+            zMin, zMax = zMid - minRange / 2, zMid + minRange / 2
 
-        ax.set_xlim([x_min, x_max])
-        ax.set_ylim([y_min, y_max])
-        ax.set_zlim([z_min, z_max])
+        ax.set_xlim([xMin, xMax])
+        ax.set_ylim([yMin, yMax])
+        ax.set_zlim([zMin, zMax])
 
-    # Add camera origin as reference point
-    ax.scatter([0], [0], [0], color='blue', s=100, marker='o', label='Camera Origin')
+    # show camera origin as blue dot
+    ax.scatter([0], [0], [0], color='blue', s=100, marker='o', label='Camera')
 
-    # Add legend
+    # add legend
     from matplotlib.lines import Line2D
-    legend_elements = [
+    legend_stuff = [
         Line2D([0], [0], color='green', linewidth=2, label=f'Matched ({len(matched_set)})'),
         Line2D([0], [0], color='red', linewidth=2, alpha=0.4, label=f'Unmatched ({len(lines_3d) - len(matched_set)})'),
         Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', markersize=10, label='Camera')
     ]
-    ax.legend(handles=legend_elements, loc='upper right')
+    ax.legend(handles=legend_stuff, loc='upper right')
 
-    # Update display (non-blocking)
+    # update the display
     plt.draw()
-    plt.pause(0.001)  # Small pause to allow display update
+    plt.pause(0.001)
 
 
 def render_3d_visualization_to_image(lines_3d, matched_indices=None, figsize=(10, 8)):
-    """
-    Render 3D visualization to a numpy array (for OpenCV display).
+    # renders 3D viz to an image instead of showing in window
+    # useful for displaying with opencv (avoids threading issues)
 
-    Creates a matplotlib figure, renders the 3D lines, and converts to BGR image.
-    This avoids GIL conflicts with OpenCV's cv2.waitKey().
-
-    Args:
-        lines_3d: Array of 3D lines (N, 6) with format [X1, Y1, Z1, X2, Y2, Z2]
-        matched_indices: Optional list of indices for lines that were matched
-        figsize: Figure size (width, height) in inches
-
-    Returns:
-        image: BGR numpy array (H, W, 3) suitable for cv2.imshow()
-               Returns None if lines_3d is empty
-    """
     import io
 
-    # Handle empty case
+    # return None if no lines
     if len(lines_3d) == 0:
         return None
 
-    # Create figure and axis
+    # create new figure
     fig = plt.figure(figsize=figsize)
     ax = fig.add_subplot(111, projection='3d')
 
-    # Set labels and title
-    ax.set_xlabel('X (camera right)', fontsize=10)
-    ax.set_ylabel('Y (camera down)', fontsize=10)
-    ax.set_zlabel('Z (camera forward)', fontsize=10)
-    ax.set_title('3D Line Visualization (Camera Frame)', fontsize=12)
+    # set up labels
+    ax.set_xlabel('X (right)', fontsize=10)
+    ax.set_ylabel('Y (down)', fontsize=10)
+    ax.set_zlabel('Z (forward)', fontsize=10)
+    ax.set_title('3D Lines', fontsize=12)
 
-    # Set view angle
+    # set viewing angle
     ax.view_init(elev=20, azim=45)
 
-    # Convert matched indices to set for fast lookup
+    # matched lines set
     matched_set = set(matched_indices) if matched_indices is not None else set()
 
-    # Draw each line
+    # draw lines (same as update function)
     for idx, line in enumerate(lines_3d):
         X1, Y1, Z1, X2, Y2, Z2 = line
-        color = 'green' if idx in matched_set else 'red'
-        alpha = 0.8 if idx in matched_set else 0.4
-        linewidth = 2.0 if idx in matched_set else 1.5
+        clr = 'green' if idx in matched_set else 'red'
+        alph = 0.8 if idx in matched_set else 0.4
+        lw = 2.0 if idx in matched_set else 1.5
         ax.plot([X1, X2], [Y1, Y2], [Z1, Z2],
-                color=color, linewidth=linewidth, alpha=alpha)
+                color=clr, linewidth=lw, alpha=alph)
 
-    # Set axis limits based on data statistics
+    # set limits based on data
     if len(lines_3d) > 0:
-        all_points = lines_3d.reshape(-1, 3)
-        x_median, y_median, z_median = np.median(all_points, axis=0)
-        x_std, y_std, z_std = np.std(all_points, axis=0)
+        pts = lines_3d.reshape(-1, 3)
+        x_med, y_med, z_med = np.median(pts, axis=0)
+        x_std, y_std, z_std = np.std(pts, axis=0)
 
-        scale = 3
-        x_min, x_max = x_median - scale * x_std, x_median + scale * x_std
-        y_min, y_max = y_median - scale * y_std, y_median + scale * y_std
-        z_min, z_max = z_median - scale * z_std, z_median + scale * z_std
+        sc = 3  # scale factor
+        xMin, xMax = x_med - sc * x_std, x_med + sc * x_std
+        yMin, yMax = y_med - sc * y_std, y_med + sc * y_std
+        zMin, zMax = z_med - sc * z_std, z_med + sc * z_std
 
-        # Ensure minimum range
-        min_range = 1.0
-        if x_max - x_min < min_range:
-            x_mid = (x_min + x_max) / 2
-            x_min, x_max = x_mid - min_range / 2, x_mid + min_range / 2
-        if y_max - y_min < min_range:
-            y_mid = (y_min + y_max) / 2
-            y_min, y_max = y_mid - min_range / 2, y_mid + min_range / 2
-        if z_max - z_min < min_range:
-            z_mid = (z_min + z_max) / 2
-            z_min, z_max = z_mid - min_range / 2, z_mid + min_range / 2
+        # ensure min range
+        minRng = 1.0
+        if xMax - xMin < minRng:
+            xMid = (xMin + xMax) / 2
+            xMin, xMax = xMid - minRng / 2, xMid + minRng / 2
+        if yMax - yMin < minRng:
+            yMid = (yMin + yMax) / 2
+            yMin, yMax = yMid - minRng / 2, yMid + minRng / 2
+        if zMax - zMin < minRng:
+            zMid = (zMin + zMax) / 2
+            zMin, zMax = zMid - minRng / 2, zMid + minRng / 2
 
-        ax.set_xlim([x_min, x_max])
-        ax.set_ylim([y_min, y_max])
-        ax.set_zlim([z_min, z_max])
+        ax.set_xlim([xMin, xMax])
+        ax.set_ylim([yMin, yMax])
+        ax.set_zlim([zMin, zMax])
 
-    # Add camera origin
-    ax.scatter([0], [0], [0], color='blue', s=100, marker='o', label='Camera Origin')
+    # camera origin
+    ax.scatter([0], [0], [0], color='blue', s=100, marker='o', label='Camera')
 
-    # Add legend
+    # legend
     from matplotlib.lines import Line2D
-    legend_elements = [
+    leg = [
         Line2D([0], [0], color='green', linewidth=2, label=f'Matched ({len(matched_set)})'),
         Line2D([0], [0], color='red', linewidth=2, alpha=0.4, label=f'Unmatched ({len(lines_3d) - len(matched_set)})'),
         Line2D([0], [0], marker='o', color='w', markerfacecolor='blue', markersize=10, label='Camera')
     ]
-    ax.legend(handles=legend_elements, loc='upper right')
+    ax.legend(handles=leg, loc='upper right')
 
-    # Render figure to buffer
-    buf = io.BytesIO()
-    fig.savefig(buf, format='png', dpi=80, bbox_inches='tight')
-    buf.seek(0)
+    # render to buffer
+    buffer = io.BytesIO()
+    fig.savefig(buffer, format='png', dpi=80, bbox_inches='tight')
+    buffer.seek(0)
 
-    # Convert to numpy array
+    # convert to opencv image
     import cv2
-    image_array = np.frombuffer(buf.read(), dtype=np.uint8)
-    image = cv2.imdecode(image_array, cv2.IMREAD_COLOR)
+    img_arr = np.frombuffer(buffer.read(), dtype=np.uint8)
+    img = cv2.imdecode(img_arr, cv2.IMREAD_COLOR)
 
-    # Close figure to free memory
+    # close figure to free memory (important!)
     plt.close(fig)
 
-    return image
+    return img

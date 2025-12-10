@@ -3,6 +3,9 @@ M-LSD
 Copyright 2021-present NAVER Corp.
 Apache License v2.0
 '''
+# Modified for coursework project - added some comments to understand what's happening
+# M-LSD is a mobile-friendly line segment detector (really fast!)
+
 import os
 import numpy as np
 import cv2
@@ -10,35 +13,55 @@ import tensorflow as tf
 
 
 def pred_lines(image, interpreter, input_details, output_details, input_shape=[512, 512], score_thr=0.10, dist_thr=20.0):
-    h, w, _ = image.shape
-    h_ratio, w_ratio = [h / input_shape[0], w / input_shape[1]]
+    # predicts line segments in the image using M-LSD model
+    # image: input image (BGR)
+    # interpreter: TFLite interpreter (loaded model)
+    # score_thr: confidence threshold (lower = more lines but noisier)
+    # dist_thr: minimum line length in pixels
 
-    resized_image = np.concatenate([cv2.resize(image, (input_shape[0], input_shape[1]), interpolation=cv2.INTER_AREA), np.ones([input_shape[0], input_shape[1], 1])], axis=-1)
-    batch_image = np.expand_dims(resized_image, axis=0).astype('float32')
-    interpreter.set_tensor(input_details[0]['index'], batch_image)
+    h, w, _ = image.shape
+    h_ratio, w_ratio = [h / input_shape[0], w / input_shape[1]]  # for scaling back to original size
+
+    # resize image and add alpha channel (model expects 4 channels for some reason)
+    resized_img = cv2.resize(image, (input_shape[0], input_shape[1]), interpolation=cv2.INTER_AREA)
+    alpha_channel = np.ones([input_shape[0], input_shape[1], 1])
+    resized_img = np.concatenate([resized_img, alpha_channel], axis=-1)
+
+    # prepare batch for model
+    batch = np.expand_dims(resized_img, axis=0).astype('float32')
+
+    # run inference
+    interpreter.set_tensor(input_details[0]['index'], batch)
     interpreter.invoke()
 
-    pts = interpreter.get_tensor(output_details[0]['index'])[0]
-    pts_score = interpreter.get_tensor(output_details[1]['index'])[0]
-    vmap = interpreter.get_tensor(output_details[2]['index'])[0]
+    # get model outputs
+    pts = interpreter.get_tensor(output_details[0]['index'])[0]  # junction points
+    pts_score = interpreter.get_tensor(output_details[1]['index'])[0]  # confidence scores
+    vmap = interpreter.get_tensor(output_details[2]['index'])[0]  # displacement vectors
 
-    start = vmap[:,:,:2]
-    end = vmap[:,:,2:]
-    dist_map = np.sqrt(np.sum((start - end) ** 2, axis=-1))
+    # compute distance map (line lengths)
+    startPts = vmap[:,:,:2]
+    endPts = vmap[:,:,2:]
+    dist_map = np.sqrt(np.sum((startPts - endPts) ** 2, axis=-1))
 
-    segments_list = []
+    # extract line segments
+    seg_list = []
     for center, score in zip(pts, pts_score):
         y, x = center
-        distance = dist_map[y, x]
-        if score > score_thr and distance > dist_thr:
-            disp_x_start, disp_y_start, disp_x_end, disp_y_end = vmap[y, x, :]
-            x_start = x + disp_x_start
-            y_start = y + disp_y_start
-            x_end = x + disp_x_end
-            y_end = y + disp_y_end
-            segments_list.append([x_start, y_start, x_end, y_end])
-    
-    lines = 2 * np.array(segments_list) # 256 > 512
+        dist = dist_map[y, x]
+
+        # filter by score and distance thresholds
+        if score > score_thr and dist > dist_thr:
+            # get displacement vectors at this point
+            dx_start, dy_start, dx_end, dy_end = vmap[y, x, :]
+            xStart = x + dx_start
+            yStart = y + dy_start
+            xEnd = x + dx_end
+            yEnd = y + dy_end
+            seg_list.append([xStart, yStart, xEnd, yEnd])
+
+    # scale lines back to original image size
+    lines = 2 * np.array(seg_list)  # 256 -> 512 (model outputs at half resolution)
     lines[:,0] = lines[:,0] * w_ratio
     lines[:,1] = lines[:,1] * h_ratio
     lines[:,2] = lines[:,2] * w_ratio

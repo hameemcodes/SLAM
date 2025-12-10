@@ -1,3 +1,7 @@
+# Camera calibration script for SLAM coursework
+# Last updated: 2am 
+
+
 import numpy as np
 import cv2
 import glob
@@ -5,164 +9,173 @@ import os
 import pickle
 import time
 
-# Camera calibration parameters
-# You can modify these variables as needed
-CHESSBOARD_SIZE = (9, 6)  # Number of inner corners per chessboard row and column
-SQUARE_SIZE = 2.45        # Size of a square in centimeters
-# Use a raw string with the full Windows path (avoid "\U" unicode escape)
-#CALIBRATION_IMAGES_DIR = 'C:\Users\hamee\Downloads\chessboard2*.jpg'  # Path to calibration images
-CALIBRATION_IMAGES_DIR = r'C:\Users\hamee\Downloads\chessboard2'  # directory (no wildcard)
-IMAGE_PATTERNS = ('*.jpg', '*.jpeg', '*.png', '*.HEIC', '*.DNG')  # include HEIC/heif
-OUTPUT_DIRECTORY = 'output'  # Directory to save calibration results
-SAVE_UNDISTORTED = False   # Whether to save undistorted images
+# Camera calibration params - based on the opencv tutorial
+# TODO: assess matrix
+chessboard_size = (9, 6)  # inner corners - spent forever counting these correctly
+square_sz = 2.45   # measured with ruler, in cm (TODO: double check this measurement)
 
-# Performance optimization settings
-MAX_DETECTION_SIZE = 3000  # Max dimension for corner detection (width or height)
-MAX_REFINEMENT_SIZE = 3000  # Max dimension for corner refinement
-ENABLE_FALLBACK_DETECTION = False  # Disable slow fallback methods
+# Change this to wherever your images are
+CALIBRATION_IMAGES_DIR = r'C:\Users\hamee\Downloads\chessboard2'  # NOTE: change this path!
+img_patterns = ('*.jpg', '*.jpeg', '*.png', '*.HEIC', '*.DNG')
+output_dir = 'output'
+SAVE_UNDISTORTED = False   # set to True if you want to see undistorted images (takes forever though)
+
+# Performance stuff - these numbers worked best after testing
+MAX_DETECTION_SIZE = 3000  # making this bigger is really slow
+max_refine_size = 3000
+enable_fallback = False  # fallback methods are super slow, disabled for now
 
 def _get_image_list():
-    """Return list of image file paths from CALIBRATION_IMAGES_DIR matching IMAGE_PATTERNS."""
-    images = []
-    for p in IMAGE_PATTERNS:
-        images.extend(glob.glob(os.path.join(CALIBRATION_IMAGES_DIR, p)))
-    images.sort()
-    return images
+    # gets all the calibration images from the folder
+    img_list = []
+    for pattern in img_patterns:
+        found_imgs = glob.glob(os.path.join(CALIBRATION_IMAGES_DIR, pattern))
+        img_list.extend(found_imgs)
+    img_list.sort()  # make sure they're in order
+    return img_list
 
 def imread_flexible(path):
+    # this function handles different image formats
+    # mainly for HEIC images from iphone (pain to work with!)
 
     img = cv2.imread(path)
     if img is not None:
         return img
-    ext = os.path.splitext(path)[1].lower()
-    if ext in ('.heic', '.heif'):
+
+    # check if it's HEIC format
+    file_ext = os.path.splitext(path)[1].lower()
+    if file_ext in ('.heic', '.heif'):
         try:
-            # lazy import so script still runs if user doesn't need HEIC support
-            import pillow_heif  # registers HEIF/HEIC support for Pillow
+            # found this solution on stackoverflow, seems to work
+            import pillow_heif
             from PIL import Image
-            pillow_heif.register_heif_opener()  # safe to call
-            pil = Image.open(path).convert('RGB')
-            arr = np.array(pil)[:, :, ::-1].copy()  # RGB -> BGR for OpenCV compatibility
+            pillow_heif.register_heif_opener()
+            pil_img = Image.open(path).convert('RGB')
+            # convert PIL to opencv format (BGR)
+            arr = np.array(pil_img)[:, :, ::-1].copy()
             return arr
         except Exception as e:
-            print(f"HEIC read failed for {path}: {e}")
+            print(f"Couldn't read HEIC file {path}: {e}")
             return None
+
     return None
 
 def convert_images_to_jpg():
+    # converts all images to JPG format since opencv likes JPG better
+    # TODO: make backup of originals?
 
-    print("Scanning for images to convert to JPG...")
+    print("Looking for images to convert...")
 
-    # Get all image files
+    # Get all image files from folder
     all_files = []
-    for pattern in IMAGE_PATTERNS:
-        all_files.extend(glob.glob(os.path.join(CALIBRATION_IMAGES_DIR, pattern)))
+    for pattern in img_patterns:
+        found = glob.glob(os.path.join(CALIBRATION_IMAGES_DIR, pattern))
+        all_files.extend(found)
 
     if not all_files:
-        print(f"No images found in {CALIBRATION_IMAGES_DIR}")
+        print(f"Didn't find any images in {CALIBRATION_IMAGES_DIR}")
         return
 
-    # Filter out files that are already JPG/JPEG
-    files_to_convert = [f for f in all_files if not f.lower().endswith(('.jpg', '.jpeg'))]
+    # skip files that are already jpg
+    files_to_convert = []
+    for f in all_files:
+        if not f.lower().endswith(('.jpg', '.jpeg')):
+            files_to_convert.append(f)
 
     if not files_to_convert:
-        print("All images are already in JPG format. No conversion needed.")
+        print("Everything's already JPG, we're good")
         return
 
-    print(f"Found {len(files_to_convert)} image(s) to convert to JPG format...")
+    print(f"Found {len(files_to_convert)} files that need converting...")
 
-    converted_count = 0
-    failed_count = 0
+    num_converted = 0
+    num_failed = 0
 
     for idx, filepath in enumerate(files_to_convert):
         print(f"Converting {idx+1}/{len(files_to_convert)}: {os.path.basename(filepath)}...", end=" ")
 
-        # Load the image using the flexible reader
+        # try to load the image
         img = imread_flexible(filepath)
 
         if img is None:
-            print("FAILED (could not load image)")
-            failed_count += 1
+            print("FAILED - couldn't load")
+            num_failed += 1
             continue
 
-        # Create new filename with .jpg extension
+        # create new filename
         base_name = os.path.splitext(filepath)[0]
-        jpg_filepath = base_name + '.jpg'
+        jpg_path = base_name + '.jpg'
 
-        # Save as JPG with maximum quality (100)
-        success = cv2.imwrite(jpg_filepath, img, [cv2.IMWRITE_JPEG_QUALITY, 100])
+        # save with quality=100 (best quality)
+        success = cv2.imwrite(jpg_path, img, [cv2.IMWRITE_JPEG_QUALITY, 100])
 
         if success:
-            # Delete the original file
+            # delete original file
             try:
                 os.remove(filepath)
-                print(f"OK (saved as {os.path.basename(jpg_filepath)})")
-                converted_count += 1
+                print(f"OK")
+                num_converted += 1
             except Exception as e:
-                print(f"WARNING (saved JPG but could not delete original: {e})")
-                converted_count += 1
+                print(f"WARNING - saved but couldn't delete original")
+                num_converted += 1
         else:
-            print("FAILED (could not save JPG)")
-            failed_count += 1
+            print("FAILED - couldn't save")
+            num_failed += 1
 
-    print(f"\nConversion complete: {converted_count} converted, {failed_count} failed")
+    print(f"\nDone! Converted: {num_converted}, Failed: {num_failed}")
 
-def downscale_image(img, max_dimension):
-    """
-    Downscale image if it exceeds max_dimension while preserving aspect ratio.
-    Returns (downscaled_img, scale_factor)
-    """
+def downscale_image(img, max_dim):
+    # downscales image if too big (helps with speed)
+    # returns the resized image and the scale factor used
+
     h, w = img.shape[:2]
-    max_dim = max(h, w)
+    maxDim = max(h, w)
 
-    if max_dim <= max_dimension:
-        return img, 1.0
+    if maxDim <= max_dim:
+        return img, 1.0  # no need to resize
 
-    scale = max_dimension / max_dim
-    new_w = int(w * scale)
-    new_h = int(h * scale)
+    # calculate scale
+    scale_factor = max_dim / maxDim
+    newW = int(w * scale_factor)
+    newH = int(h * scale_factor)
 
-    downscaled = cv2.resize(img, (new_w, new_h), interpolation=cv2.INTER_AREA)
-    return downscaled, scale
+    # resize using INTER_AREA (best for downscaling)
+    resized = cv2.resize(img, (newW, newH), interpolation=cv2.INTER_AREA)
+    return resized, scale_factor
 
 def calibrate_camera():
-    """
-    Calibrate the camera using chessboard images.
-    
-    Returns:
-        ret: The RMS re-projection error
-        mtx: Camera matrix
-        dist: Distortion coefficients
-        rvecs: Rotation vectors
-        tvecs: Translation vectors
-    """
-    # Prepare object points (0,0,0), (1,0,0), (2,0,0) ... (8,5,0)
-    objp = np.zeros((CHESSBOARD_SIZE[0] * CHESSBOARD_SIZE[1], 3), np.float32)
-    objp[:, :2] = np.mgrid[0:CHESSBOARD_SIZE[0], 0:CHESSBOARD_SIZE[1]].T.reshape(-1, 2)
-    
-    # Scale object points by square size (for real-world measurements)
-    objp = objp * SQUARE_SIZE
-    
-    # Arrays to store object points and image points from all images
-    objpoints = []  # 3D points in real world space
-    imgpoints = []  # 2D points in image plane
+    # Main calibration function - this does all the heavy lifting
+    # Based on opencv camera calibration tutorial
+    # TODO: test 
 
-    # Store downscaled image size for calibration
-    downscaled_size = None
-    original_size = None
+    # Set up object points for the chessboard pattern
+    # these are the 3D coordinates of chessboard corners in real world
+    objp = np.zeros((chessboard_size[0] * chessboard_size[1], 3), np.float32)
+    objp[:, :2] = np.mgrid[0:chessboard_size[0], 0:chessboard_size[1]].T.reshape(-1, 2)
 
-    # Get list of calibration images
-    images = _get_image_list()
-    
-    if not images:
-        print(f"No calibration images found at {CALIBRATION_IMAGES_DIR}")
+    # multiply by square size to get actual measurements
+    objp = objp * square_sz
+
+    # these will store the corner positions from all images
+    obj_points = []  # 3D points (real world)
+    img_points = []  # 2D points (in image)
+
+    # keep track of image sizes
+    downscaled_sz = None
+    orig_sz = None
+
+    # get all the chessboard images
+    imgs = _get_image_list()
+
+    if not imgs:
+        print(f"Couldn't find any calibration images in {CALIBRATION_IMAGES_DIR}")
         return None, None, None, None, None
-    
-    # Create output directory if it doesn't exist
-    if not os.path.exists(OUTPUT_DIRECTORY):
-        os.makedirs(OUTPUT_DIRECTORY)
-    
-    print(f"Found {len(images)} calibration images")
+
+    # make output folder if it doesn't exist
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+
+    print(f"Found {len(imgs)} calibration images - let's process them")
 
     # Process each calibration image
     for idx, fname in enumerate(images):
