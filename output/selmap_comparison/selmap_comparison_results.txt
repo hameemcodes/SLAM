@@ -1,0 +1,199 @@
+SelMap Filtering Comparison Results
+============================================================
+
+Pair 1: 1305031102.175304.png <-> 1305031102.211214.png
+  Lines: 49 -> 46
+  Matches WITHOUT SelMap: 10
+  Matches WITH SelMap:    2
+  Rejected:               8 (80.0%)
+
+Pair 2: 1305031102.211214.png <-> 1305031102.243211.png
+  Lines: 46 -> 39
+  Matches WITHOUT SelMap: 11
+  Matches WITH SelMap:    3
+  Rejected:               8 (72.7%)
+
+Pair 3: 1305031102.243211.png <-> 1305031102.275326.png
+  Lines: 39 -> 44
+  Matches WITHOUT SelMap: 15
+  Matches WITH SelMap:    6
+  Rejected:               9 (60.0%)
+
+Pair 4: 1305031102.275326.png <-> 1305031102.311267.png
+  Lines: 44 -> 51
+  Matches WITHOUT SelMap: 20
+  Matches WITH SelMap:    8
+  Rejected:               12 (60.0%)
+
+Pair 5: 1305031102.311267.png <-> 1305031102.343233.png
+  Lines: 51 -> 39
+  Matches WITHOUT SelMap: 21
+  Matches WITH SelMap:    7
+  Rejected:               14 (66.7%)
+
+Pair 6: 1305031102.343233.png <-> 1305031102.375329.png
+  Lines: 39 -> 43
+  Matches WITHOUT SelMap: 17
+  Matches WITH SelMap:    5
+  Rejected:               12 (70.6%)
+
+Pair 7: 1305031102.375329.png <-> 1305031102.411258.png
+  Lines: 43 -> 41
+  Matches WITHOUT SelMap: 13
+  Matches WITH SelMap:    2
+  Rejected:               11 (84.6%)
+
+Pair 8: 1305031102.411258.png <-> 1305031102.443271.png
+  Lines: 41 -> 37
+  Matches WITHOUT SelMap: 8
+  Matches WITH SelMap:    3
+  Rejected:               5 (62.5%)
+
+Pair 9: 1305031102.443271.png <-> 1305031102.475318.png
+  Lines: 37 -> 42
+  Matches WITHOUT SelMap: 8
+  Matches WITH SelMap:    0
+  Rejected:               8 (100.0%)
+
+Pair 10: 1305031102.475318.png <-> 1305031102.511219.png
+  Lines: 42 -> 43
+  Matches WITHOUT SelMap: 15
+  Matches WITH SelMap:    3
+  Rejected:               12 (80.0%)
+
+Pair 11: 1305031102.511219.png <-> 1305031102.543220.png
+  Lines: 43 -> 44
+  Matches WITHOUT SelMap: 19
+  Matches WITH SelMap:    1
+  Rejected:               18 (94.7%)
+
+Pair 12: 1305031102.543220.png <-> 1305031102.575286.png
+  Lines: 44 -> 46
+  Matches WITHOUT SelMap: 16
+  Matches WITH SelMap:    5
+  Rejected:               11 (68.8%)
+
+Pair 13: 1305031102.575286.png <-> 1305031102.611233.png
+  Lines: 46 -> 48
+  Matches WITHOUT SelMap: 19
+  Matches WITH SelMap:    2
+  Rejected:               17 (89.5%)
+
+Pair 14: 1305031102.611233.png <-> 1305031102.643265.png
+  Lines: 48 -> 44
+  Matches WITHOUT SelMap: 23
+  Matches WITH SelMap:    7
+  Rejected:               16 (69.6%)
+
+Pair 15: 1305031102.643265.png <-> 1305031102.675285.png
+  Lines: 44 -> 43
+  Matches WITHOUT SelMap: 21
+  Matches WITH SelMap:    6
+  Rejected:               15 (71.4%)
+
+Pair 16: 1305031102.675285.png <-> 1305031102.711263.png
+  Lines: 43 -> 35
+  Matches WITHOUT SelMap: 19
+  Matches WITH SelMap:    4
+  Rejected:               15 (78.9%)
+
+Pair 17: 1305031102.711263.png <-> 1305031102.743234.png
+  Lines: 35 -> 40
+  Matches WITHOUT SelMap: 12
+  Matches WITH SelMap:    4
+  Rejected:               8 (66.7%)
+
+Pair 18: 1305031102.743234.png <-> 1305031102.775472.png
+  Lines: 40 -> 42
+  Matches WITHOUT SelMap: 15
+  Matches WITH SelMap:    9
+  Rejected:               6 (40.0%)
+
+Pair 19: 1305031102.775472.png <-> 1305031102.811232.png
+  Lines: 42 -> 41
+  Matches WITHOUT SelMap: 16
+  Matches WITH SelMap:    5
+  Rejected:               11 (68.8%)
+
+Pair 20: 1305031102.811232.png <-> 1305031102.843290.png
+  Lines: 41 -> 33
+  Matches WITHOUT SelMap: 14
+  Matches WITH SelMap:    2
+  Rejected:               12 (85.7%)
+
+Pair 21: 1305031102.843290.png <-> 1305031102.875363.png
+  Lines: 33 -> 36
+  Matches WITHOUT SelMap: 16
+  Matches WITH SelMap:    5
+  Rejected:               11 (68.8%)
+
+Pair 22: 1305031102.875363.png <-> 1305031102.911185.png
+  Lines: 36 -> 33
+  Matches WITHOUT SelMap: 18
+  Matches WITH SelMap:    2
+  Rejected:               16 (88.9%)
+
+Pair 23: 1305031102.911185.png <-> 1305031102.943229.png
+  Lines: 33 -> 33
+  Matches WITHOUT SelMap: 13
+  Matches WITH SelMap:    2
+  Rejected:               11 (84.6%)
+
+Pair 24: 1305031102.943229.png <-> 1305031102.975203.png
+  Lines: 33 -> 37
+  Matches WITHOUT SelMap: 12
+  Matches WITH SelMap:    7
+  Rejected:               5 (41.7%)
+
+Pair 25: 1305031102.975203.png <-> 1305031103.011215.png
+  Lines: 37 -> 32
+  Matches WITHOUT SelMap: 12
+  Matches WITH SelMap:    3
+  Rejected:               9 (75.0%)
+
+Pair 26: 1305031103.011215.png <-> 1305031103.043227.png
+  Lines: 32 -> 40
+  Matches WITHOUT SelMap: 14
+  Matches WITH SelMap:    1
+  Rejected:               13 (92.9%)
+
+Pair 27: 1305031103.043227.png <-> 1305031103.075319.png
+  Lines: 40 -> 46
+  Matches WITHOUT SelMap: 17
+  Matches WITH SelMap:    0
+  Rejected:               17 (100.0%)
+
+Pair 28: 1305031103.075319.png <-> 1305031103.111240.png
+  Lines: 46 -> 44
+  Matches WITHOUT SelMap: 22
+  Matches WITH SelMap:    8
+  Rejected:               14 (63.6%)
+
+Pair 29: 1305031103.111240.png <-> 1305031103.143318.png
+  Lines: 44 -> 42
+  Matches WITHOUT SelMap: 24
+  Matches WITH SelMap:    11
+  Rejected:               13 (54.2%)
+
+============================================================
+SUMMARY
+============================================================
+Total pairs processed: 29
+Total matches WITHOUT SelMap: 460
+Total matches WITH SelMap:    123
+Total rejected by SelMap:     337
+Average rejection rate:       73.3%
+Average matches per pair WITHOUT SelMap: 15.9
+Average matches per pair WITH SelMap:    4.2
+
+Descriptor distances for GOOD matches (kept by SelMap):
+  Mean: 0.2010
+  Std:  0.0533
+  Min:  0.0835
+  Max:  0.2998
+
+Descriptor distances for BAD matches (rejected by SelMap):
+  Mean: 0.2108
+  Std:  0.0541
+  Min:  0.0638
+  Max:  0.2985
